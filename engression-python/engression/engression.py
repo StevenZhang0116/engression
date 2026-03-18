@@ -12,7 +12,8 @@ def engression(x, y, classification=False,
                add_bn=True, resblock=False, beta=1,
                lr=0.0001, num_epochs=500, batch_size=None, 
                print_every_nepoch=100, print_times_per_epoch=1,
-               device="cpu", standardize=True, verbose=True): 
+               device="cpu", standardize=True, verbose=True,
+               noise_type="gaussian", noise_df=3.0, noise_std=1.0): 
     """This function fits an engression model to the data. It allows multivariate predictors and response variables. Variables are per default internally standardized (training with standardized data, while predictions and evaluations are on original scale).
 
     Args:
@@ -44,7 +45,8 @@ def engression(x, y, classification=False,
                           num_layer=num_layer, hidden_dim=hidden_dim, noise_dim=noise_dim, 
                           out_act=out_act, resblock=resblock, add_bn=add_bn, beta=beta,
                           lr=lr, num_epochs=num_epochs, batch_size=batch_size, 
-                          standardize=standardize, device=device, check_device=verbose, verbose=verbose)
+                          standardize=standardize, device=device, check_device=verbose, verbose=verbose,
+                          noise_type=noise_type, noise_df=noise_df, noise_std=noise_std)
     engressor.train(x, y, num_epochs=num_epochs, batch_size=batch_size, 
                     print_every_nepoch=print_every_nepoch, print_times_per_epoch=print_times_per_epoch, 
                     standardize=standardize, verbose=verbose)
@@ -77,7 +79,8 @@ class Engressor(object):
                  num_layer=2, hidden_dim=100, noise_dim=100, 
                  out_act=False, resblock=False, add_bn=True, beta=1,
                  lr=0.0001, num_epochs=500, batch_size=None, standardize=True, 
-                 device="cpu", check_device=True, verbose=True): 
+                 device="cpu", check_device=True, verbose=True, 
+                 noise_type="gaussian", noise_df=3.0, noise_std=1.0): 
         super().__init__()
         self.classification = classification
         if classification:
@@ -106,7 +109,8 @@ class Engressor(object):
         self.y_mean = None
         self.y_std = None
         
-        self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, out_act, resblock).to(self.device)
+        self.model = StoNet(in_dim, out_dim, num_layer, hidden_dim, noise_dim, add_bn, out_act, resblock, 
+                            noise_std=noise_std, noise_type=noise_type, noise_df=noise_df).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
         self.verbose = verbose
         
@@ -256,7 +260,7 @@ class Engressor(object):
                 self.optimizer.step()
                 if (epoch_idx == 0 or  (epoch_idx + 1) % print_every_nepoch == 0) and verbose:
                     print("[Epoch {} ({:.0f}%)] energy-loss: {:.4f},  E(|Y-Yhat|): {:.4f},  E(|Yhat-Yhat'|): {:.4f}".format(
-                        epoch_idx + 1, 100 * epoch_idx / self.num_epochs, loss.item(), loss1.item(), loss2.item()))
+                        epoch_idx + 1, 100 * epoch_idx / num_epochs, loss.item(), loss1.item(), loss2.item()))
         else:
             train_loader = make_dataloader(x, y, batch_size=batch_size, shuffle=True)
             if verbose:
